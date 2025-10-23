@@ -18,10 +18,9 @@ _graphical_environment_runtime_setup() {
   done
 }
 
+chroot_path="/mnt"
 if (( 0 < "${#}" )); then
   chroot_path="${1}"
-else
-  chroot_path="$(pwd)"
 fi
 
 app_opts=(

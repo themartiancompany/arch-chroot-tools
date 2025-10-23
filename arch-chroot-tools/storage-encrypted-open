@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+
+
+_check_fs_btrfs() {
+  local \
+    _device="${1}"
+  btrfs \
+    check \
+      "${_device}" 
+}
+
+_storage_encrypted_open() {
+  local \
+    _device="${1}" \
+    _fs_type="${2}" \
+    _mount_point="${3}" \
+    _paths=() \
+    _cryptsetup_opts=() \
+    _mount_opts=() \
+    _mapper
+  _device_name="storage"
+  _mapper="/dev/mapper/${_device_name}"
+  _cryptsetup_opts+=(
+    open
+      "${_device}"
+  )
+  _mount_opts+=(
+    -t
+      "${fs_type}"
+  )
+  cryptsetup \
+    "${_cryptsetup_opts[@]}" \
+    "${_device_name}"
+  "_check_fs_${fs_type}" \
+    "${_mapper}" 
+  mount \
+    "${_mount_opts[@]}" \
+  "${_mapper}" \
+  "${_mount_point}"
+}
+
+device_path="/dev/sdX3"
+if (( 0 < "${#}" )); then
+  device_path="${1}"
+fi
+fs_type="btrfs"
+if (( 1 < "${#}" )); then
+  fs_type="${2}"
+fi
+storage_path="/mnt/storage"
+if (( 2 < "${#}" )); then
+  storage_path="${3}"
+fi
+
+app_opts=(
+  "${device_path}"
+  "${fs_type}"
+  "${storage_path}"
+)
+
+_storage_encrypted_open \
+  "${app_opts[@]}"

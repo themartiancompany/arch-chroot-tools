@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+
+_storage_setup() {
+  local \
+    _storage="${1}" \
+    _paths=()
+  _paths+=(
+    "/home/user/.cache/qutebrowser"
+    '/home/user/.cache/chromium'
+    '/home/dev/.cache/evmfs'
+  )
+  for _path in "${_paths[@]}"; do
+    mount \
+      -o \
+        bind \
+      "${_paths}" \
+      "${_storage}${_path}"
+  done
+}
+
+storage_path="/mnt/storage"
+if (( 0 < "${#}" )); then
+  storage_path="${1}"
+fi
+
+app_opts=(
+  "${storage_path}"
+)
+
+_user_setup \
+  "${app_opts[@]}"
