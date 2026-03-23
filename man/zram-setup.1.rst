@@ -22,8 +22,48 @@
 
 
 =====================================
-Arch Chroot Tools Authors
+zram-setup
 =====================================
 
-* Pellegrino Prevete <pellegrinoprevete@gmail.com>
-* Truocolo <truocolo@aol.com>
+
+------------------------------------------------------------------
+Downloads RAM from the internet (set up and opens a ZRAM device)
+------------------------------------------------------------------
+:Version: zram-setup |version|
+:Manual section: 1
+
+
+Synopsis
+========
+
+zram-setup *[options]*
+
+
+Description
+===========
+
+Setups a 20% total memory sized ZRAM disk.
+
+
+Options
+=======
+
+-h                      Displays help.
+-c                      Enable color output
+-v                      Enable verbose output
+
+
+Bugs
+====
+
+https://github.com/themartiancompany/arch-chroot-tools/-/issues
+
+Copyright
+=========
+
+Copyright Pellegrino Prevete. AGPL-3.0.
+
+See also
+========
+
+.. include:: variables.rst

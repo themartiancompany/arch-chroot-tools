@@ -22,8 +22,56 @@
 
 
 =====================================
-Arch Chroot Tools Authors
+chroot-shell
 =====================================
 
-* Pellegrino Prevete <pellegrinoprevete@gmail.com>
-* Truocolo <truocolo@aol.com>
+
+------------------------------------------------------------------
+Open and enter a systemd-nspawn container
+------------------------------------------------------------------
+:Version: chroot-shell |version|
+:Manual section: 1
+
+
+Synopsis
+========
+
+chroot-shell *directory*
+
+
+Description
+===========
+
+Setups and runs a systemd-nspawn container
+in which a system-in-a-directory can run.
+
+I'm not sure the argument really works because
+systemd-nspawn does really seems a quirky
+program which does whatever it wants
+so be sure to run the program from the root
+directory of the system you're about to run
+just in case.
+
+
+Options
+=======
+
+-h                      Displays help.
+-c                      Enable color output
+-v                      Enable verbose output
+
+
+Bugs
+====
+
+https://github.com/themartiancompany/arch-chroot-tools/-/issues
+
+Copyright
+=========
+
+Copyright Pellegrino Prevete. AGPL-3.0.
+
+See also
+========
+
+.. include:: variables.rst

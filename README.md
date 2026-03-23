@@ -1,7 +1,7 @@
 [comment]: <> (SPDX-License-Identifier: AGPL-3.0)
 
 [comment]: <> (-------------------------------------------------------------)
-[comment]: <> (Copyright © 2024, 2025  Pellegrino Prevete)
+[comment]: <> (Copyright © 2024, 2025, 2026  Pellegrino Prevete)
 [comment]: <> (All rights reserved)
 [comment]: <> (-------------------------------------------------------------)
 
@@ -21,7 +21,21 @@
 
 # Arch Ch(ange) Root Tools
 
-Some scripts for running stuff in classic chroots.
+Some scripts for running stuff from an Arch Linux
+ephemeral live cd using classic chroots or more
+modern systemd machinery.
+
+It's really just a bunch of temporary scripts I've written
+to speed up running a graphical environment from the baseline
+arch system I'm temporarly using before Life and DogeOS
+build system will have resumed working and of which
+the only ones I really use are `zram-setup` and `chroot-shell`,
+which starts a `systemd-nspawn` container able to run a graphical
+environment.
+
+# How to use
+
+More or less the most 
 
 ## Installation
 

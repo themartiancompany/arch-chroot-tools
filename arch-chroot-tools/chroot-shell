@@ -1,0 +1,175 @@
+#!/usr/bin/env bash
+
+#    ----------------------------------------------------------------------
+#    Copyright © 2025, 2026  Pellegrino Prevete
+#
+#    All rights reserved
+#    ----------------------------------------------------------------------
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU Affero General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU Affero General Public License for more details.
+#
+#    You should have received a copy of the GNU Affero General Public License
+#    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+_requirements() {
+  local \
+    _msg \
+    _systemd_nspawn
+  _systemd_nspawn="$(
+    command \
+      -v \
+      "systemd-nspawn" || \
+    true)"
+  if [[ "${_systemd_nspawn}" == "" ]]; then
+    _msg=(
+      "Install 'systemd-nspawn'."
+    )
+    echo \
+      "${_msg[*]}"
+    exit \
+      1
+  fi
+}
+
+_chroot_shell() {
+  local \
+    _chroot="${1}" \
+    _systemd_nspawn_opts=() \
+    _card \
+    _cards=() \
+    _display \
+    _displays=() \
+    _input \
+    _inputs=() \
+    _hostname \
+    _machine_id
+  _machine_id="$(
+    cat \
+      "/etc/machine-id")"
+  _hostname="$(
+    cat \
+      "${_chroot}/etc/hostname")"
+  _cards=( $(
+    find \
+      "/dev/dri/" \
+      -maxdepth \
+        1 \
+      -type \
+        "c" \
+      -iname \
+        "card*")
+  )
+  _displays=( $(
+    find \
+      "/dev/" \
+      -maxdepth \
+        1 \
+      -type \
+        "c" \
+      -iname \
+        "video*")
+  )
+  _inputs=( $(
+    find \
+      "/dev/input" \
+      -maxdepth \
+        1 \
+      -type \
+        "c")
+  )
+  _systemd_nspawn_opts+=(
+    # --register=false
+    # --link-journal="try-guest"
+    # --keep-unit
+    -b
+    --quiet
+    # --machine
+    #  "newgulla"
+    --bind=/run/udev
+  )
+  for _card in "${_cards[@]}"; do
+    _systemd_nspawn_opts+=(
+      --bind=${_card}
+      # "--property=DeviceAllow='"${_card} rw"'"
+    )
+  done
+  _systemd_nspawn_opts+=(
+    --bind=/dev/dri/renderD128
+    # "--property=DeviceAllow='"/dev/dri/renderD128 rw"'"
+    # --property=DeviceAllow=\"char-drm rw\"
+    --bind=/dev/dri
+    # TTYS one wants to share
+    --bind=/dev/tty
+    --bind=/dev/tty0
+    --bind=/dev/tty1
+    --bind=/dev/tty2
+    --bind=/dev/tty3
+    --bind=/dev/shm
+    # Raid devices
+    --bind=/dev/md
+    --bind=/dev/fuse
+    # Sound card
+    --bind=/dev/snd
+    # Virtualization
+    --bind=/dev/kvm
+    # --share-system
+    -E
+      "DISPLAY=:0"
+    -E
+      PULSE_SERVER="unix:/run/user/host/pulse/native"
+    # --capability=CAP_NET_ADMIN
+    # --capability=CAP_SYS_ADMIN
+    # --capability=CAP_SYS_TTY_CONFIG
+    # --capability=CAP_3D_ACCESS
+    --capability=all
+  )
+  for _display in "${_displays[@]}"; do
+    _systemd_nspawn_opts+=(
+      --bind="${_display}"
+    )
+  done
+  _systemd_nspawn_opts+=(
+    --hostname=${_hostname}
+  )
+  for _input in "${_inputs[@]}"; do
+    _systemd_nspawn_opts+=(
+      --bind=${_input}
+      # "--property=DeviceAllow='"${_input} rwm"'"
+    )
+  done
+  _systemd_nspawn_opts+=(
+    --bind=/dev/input
+    # --property=DeviceAllow=\"char-input rwm\"
+    --bind=/sys/class/input
+    --bind=/run/dbus
+    --uuid=${_machine_id}
+    -D "${_chroot}"
+  )
+  _msg=(
+    "Running systemd-nspawn with"
+    "options '${_systemd_nspawn_opts[*]}'."
+  )
+  echo \
+    "${_msg[*]}"
+  mkdir \
+    -p \
+    "/dev/md"
+  systemd-nspawn \
+    "${_systemd_nspawn_opts[@]}" \
+    --property=DeviceAllow='char-input rwm' \
+    --property=DeviceAllow='char-drm rw'
+}
+
+_chroot="${1}"
+
+_requirements
+_chroot_shell \
+  "${_chroot}" 

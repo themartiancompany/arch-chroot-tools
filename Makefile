@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 #    ----------------------------------------------------------------------
-#    Copyright © 2024, 2025  Pellegrino Prevete
+#    Copyright © 2024, 2025, 2026  Pellegrino Prevete
 #
 #    All rights reserved
 #    ----------------------------------------------------------------------
@@ -41,7 +41,8 @@ DOC_FILES=\
   $(wildcard *.md)
 
 _BASH_FILES=\
-  graphical-environment-runtime-setup
+  chroot-shell
+  # graphical-environment-runtime-setup
 
 _CHECK_TARGETS=\
   shellcheck
@@ -96,7 +97,13 @@ install-man:
 	$(_INSTALL_DIR) \
 	  "$(MAN_DIR)/man1"
 	rst2man \
-	  "man/graphical-environment-runtime-setup.1.rst" \
-	  "$(MAN_DIR)/man1/graphical-environment-runtime-setup.1"
+	  "man/chroot-shell.1.rst" \
+	  "$(MAN_DIR)/man1/chroot-shell.1"
+	rst2man \
+	  "man/zram-setup.1.rst" \
+	  "$(MAN_DIR)/man1/zram-setup.1"
+	# rst2man \
+	#   "man/graphical-environment-runtime-setup.1.rst" \
+	#   "$(MAN_DIR)/man1/graphical-environment-runtime-setup.1"
 
 .PHONY: $(_PHONY_TARGETS)

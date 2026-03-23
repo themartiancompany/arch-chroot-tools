@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 #    ----------------------------------------------------------------------
-#    Copyright © 2025  Pellegrino Prevete
+#    Copyright © 2025, 2026  Pellegrino Prevete
 #
 #    All rights reserved
 #    ----------------------------------------------------------------------
@@ -97,7 +97,7 @@ else
   zram_device="/dev/zram0"
 fi
 zram_size="$(( \
-  "$(_mem_all)" / 10 ))"
+  "$(_mem_all)" / 5 ))"
 if (( 1 < "${#}" )); then
   zram_size="${2}"
 fi
