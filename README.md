@@ -27,7 +27,9 @@ modern systemd machinery.
 
 It's really just a bunch of temporary scripts I've written
 to speed up running a graphical environment from the baseline
-arch system I'm temporarly using before Life and DogeOS
+arch system I'm temporarly using before Life and
+[DogeOS](
+  https://github.com/themartiancompany/dogeos)
 build system will have resumed working and of which
 the only ones I really use are `zram-setup` and `chroot-shell`,
 which starts a `systemd-nspawn` container able to run a graphical
