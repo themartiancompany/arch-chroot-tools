@@ -26,7 +26,39 @@
 #    along with this program.
 #    If not, see <https://www.gnu.org/licenses/>.
 
+_global_variables() {
+  chroot_path=""
+  chroot_type=""
+  raid_enable=""
+  sound_enable=""
+  video_enable=""
+  virt_enable=""
+  app_opts=()
+  quiet=""
+}
+
 _requirements() {
+  local \
+    _grep \
+    _msg
+  _grep="$(
+    command \
+      -v \
+      "grep" || \
+    true)"
+  if [[ "${_grep}" == "" ]]; then
+    _msg=(
+      "Install 'grep'."
+    )
+    echo \
+      "${_msg[*]}" \
+      1>&2
+    exit \
+      1
+  fi
+}
+
+_systemd_requirements() {
   local \
     _msg \
     _systemd_nspawn
@@ -40,18 +72,141 @@ _requirements() {
       "Install 'systemd-nspawn'."
     )
     echo \
-      "${_msg[*]}"
+      "${_msg[*]}" \
+      1>&2
     exit \
       1
   fi
 }
 
-_chroot_shell() {
+_chroot_requirements() {
   local \
-    _chroot="${1}" \
+    _chroot \
+    _msg=()
+  _chroot="$(
+    command \
+      -v \
+      "arch-chroot" || \
+    true)"
+  if [[ "${_chroot}" == "" ]]; then
+    _msg=(
+      "Install the 'arch-chroot'"
+      "from the 'arch-install-scripts'"
+      "package."
+    )
+    echo \
+      "${_msg[*]}" \
+      1>&2
+    exit \
+      1
+  fi
+}
+
+_msg_info() {
+  local \
+    _msg=() \
+    _line
+  _msg=(
+    "$@"
+  )
+  if [[ "${quiet}" == "n" ]]; then
+    for _line \
+      in "${_msg[@]}"; do
+      _printf \
+        '[%s] INFO: %s\n' \
+        "${app_name}" \
+        "${_line}"
+    done
+  fi
+}
+
+_msg_error() {
+  local \
+    _msg=() \
+    _error
+  _msg=(
+    "${1}"
+  )
+  _error="${2}"
+  _printf \
+    '[%s] ERROR: %s\n' \
+    "${app_name}" \
+    "${_msg[*]}" >&2
+  if (( _error > 0 )); then
+    exit "${_error}"
+  fi
+}
+
+_video_cards_find() {
+  _video_cards=( $(
+    find \
+      "/dev/dri/" \
+      -maxdepth \
+        1 \
+      -type \
+        "c" \
+      -iname \
+        "card*")
+  )
+}
+
+_displays_find() {
+  _displays=( $(
+    find \
+      "/dev/" \
+      -maxdepth \
+        1 \
+      -type \
+        "c" \
+      -iname \
+        "video*")
+  )
+}
+
+_inputs_find() {
+  _inputs=( $(
+    find \
+      "/dev/input" \
+      -maxdepth \
+        1 \
+      -type \
+        "c")
+  )
+}
+
+_sound_cards_find() {
+  _sound_cards=( $(
+    find \
+      "/dev/snd" \
+      -maxdepth \
+        1 \
+      -type \
+        "c")
+  )
+}
+
+_devices_find() {
+  _inputs_find
+  if [[ "${_sound_enable}" == "y" ]]; then
+    _sound_cards_find
+  fi
+  if [[ "${_video_enable}" == "y" ]]; then
+    _video_cards_find
+    _displays_find
+  fi
+}
+
+_systemd_nspawn_start() {
+  local \
+    _chroot_path="${1}" \
+    _raid_enable="${2}" \
+    _sound_enable="${3}" \
+    _video_enable="${4}" \
+    _virt_enable="${5}" \
     _systemd_nspawn_opts=() \
     _card \
-    _cards=() \
+    _sound_cards=() \
+    _video_cards=() \
     _display \
     _displays=() \
     _input \
@@ -63,43 +218,10 @@ _chroot_shell() {
       "/etc/machine-id")"
   _hostname="$(
     cat \
-      "${_chroot}/etc/hostname")"
-  _cards=( $(
-    find \
-      "/dev/dri/" \
-      -maxdepth \
-        1 \
-      -type \
-        "c" \
-      -iname \
-        "card*")
-  )
-  _displays=( $(
-    find \
-      "/dev/" \
-      -maxdepth \
-        1 \
-      -type \
-        "c" \
-      -iname \
-        "video*")
-  )
-  _inputs=( $(
-    find \
-      "/dev/input" \
-      -maxdepth \
-        1 \
-      -type \
-        "c")
-  )
-  _sound_cards=( $(
-    find \
-      "/dev/snd" \
-      -maxdepth \
-        1 \
-      -type \
-        "c")
-  )
+      "${_chroot_path}/etc/hostname")"
+  _devices_find \
+    "${_sound_enable}" \
+    "${_video_enable}"
   _systemd_nspawn_opts+=(
     # --register=false
     # --link-journal="try-guest"
@@ -110,17 +232,30 @@ _chroot_shell() {
     #  "newgulla"
     --bind="/run/udev"
   )
-  for _card in "${_cards[@]}"; do
+  if [[ "${_video_enable}" == "y" ]]; then
+    for _card in "${_video_cards[@]}"; do
+      _systemd_nspawn_opts+=(
+        --bind="${_card}"
+      )
+    done
     _systemd_nspawn_opts+=(
-      --bind="${_card}"
-      # "--property=DeviceAllow='"${_card} rw"'"
+      --bind="/dev/dri"
+      --bind="/dev/dri/renderD128"
+      # "--property=DeviceAllow='"/dev/dri/renderD128 rw"'"
+      # --property=DeviceAllow=\"char-drm rw\"
     )
-  done
+  fi
+  if [[ "${_sound_enable}" == "y" ]]; then
+    _systemd_nspawn_opts+=(
+      --bind="/dev/snd"
+    )
+    for _card in "${_sound_cards[@]}"; do
+      _systemd_nspawn_opts+=(
+        --bind="${_card}"
+      )
+    done
+  fi
   _systemd_nspawn_opts+=(
-    --bind="/dev/dri/renderD128"
-    # "--property=DeviceAllow='"/dev/dri/renderD128 rw"'"
-    # --property=DeviceAllow=\"char-drm rw\"
-    --bind="/dev/dri"
     # TTYS one wants to share
     --bind="/dev/tty"
     --bind="/dev/tty0"
@@ -128,14 +263,7 @@ _chroot_shell() {
     --bind="/dev/tty2"
     --bind="/dev/tty3"
     --bind="/dev/shm"
-    # Raid devices
-    --bind="/dev/md"
     --bind="/dev/fuse"
-    # Sound card
-    --bind="/dev/snd"
-    # Virtualization
-    --bind="/dev/kvm"
-    # --share-system
     -E
       "DISPLAY=:0"
     -E
@@ -146,6 +274,17 @@ _chroot_shell() {
     # --capability=CAP_3D_ACCESS
     --capability="all"
   )
+  if [[ "${_virt_enable}" == "y" ]]; then
+    _systemd_nspawn_opts+=(
+      --bind="/dev/kvm"
+      # --share-system
+    )
+  fi
+  if [[ "${_raid_enable}" == "y" ]]; then
+    _systemd_nspawn_opts+=(
+      --bind="/dev/md"
+    )
+  fi
   for _display in "${_displays[@]}"; do
     _systemd_nspawn_opts+=(
       --bind="${_display}"
@@ -166,13 +305,23 @@ _chroot_shell() {
     --bind="/run/dbus"
     --uuid="${_machine_id}"
     -D
-      "${_chroot}"
+      "${_chroot_path}"
+    --property=DeviceAllow='char-input rwm'
+    # Seemingly not working with \"
+    # --property=DeviceAllow=\"char-input rwm\"
   )
-  for _card in "${_sound_cards[@]}"; do
+  if [[ "${_video_enable}" == "y" ]]; then
     _systemd_nspawn_opts+=(
-        --property=DeviceAllow="${_card} rw"
+      --property=DeviceAllow='char-drm rw'
     )
-  done
+  fi
+  if [[ "${_sound_enable}" == "y" ]]; then
+    for _card in "${_sound_cards[@]}"; do
+      _systemd_nspawn_opts+=(
+          --property=DeviceAllow="${_card} rw"
+      )
+    done
+  fi
   _msg=(
     "Running systemd-nspawn with"
     "options '${_systemd_nspawn_opts[*]}'."
@@ -183,15 +332,222 @@ _chroot_shell() {
     -p \
     "/dev/md"
   systemd-nspawn \
-    "${_systemd_nspawn_opts[@]}" \
-    --property=DeviceAllow='char-input rwm' \
-    --property=DeviceAllow='char-drm rw'
-    # Seemingly not working with \"
-    # --property=DeviceAllow=\"char-input rwm\"
+    "${_systemd_nspawn_opts[@]}"
 }
 
-_chroot="${1}"
+_chroot_start() {
+  local \
+    _chroot_path="${1}"
+  arch-chroot \
+    "${_chroot_path}"
+}
+
+_chroot_shell() {
+  local \
+    _chroot_path="${1}" \
+    _chroot_type="${2}" \
+    _raid_enable="${3}" \
+    _sound_enable="${4}" \
+    _video_enable="${5}" \
+    _virt_enable="${6}" \
+    _msg=()
+  if [[ "${_chroot_type}" == "chroot" ]]; then
+  _chroot_start \
+    "${_chroot_path}"
+  elif [[ "${_chroot_type}" == "systemd-nspawn" ]]; then
+    _systemd_nspawn_start \
+      "${_chroot_path}" \
+      "${_raid_enable}" \
+      "${_sound_enable}" \
+      "${_video_enable}" \
+      "${_virt_enable}"
+  else
+    _msg=(
+      "Unknown chroot type '${_chroot_type}'."
+    )
+    _msg_error \
+      "${_msg[*]}" \
+      1
+  fi
+}
+
+_chroot_type_auto_detect() {
+  local \
+    _systemctl_opts=() \
+    _dbus_active \
+    _chroot_type
+  _chroot_type="arch-chroot"
+  _systemctl="$(
+    command \
+      -v \
+      "systemctl")"
+  if [[ "${_systemctl}" != "" ]]; then 
+    _dbus_active="$(
+      systemctl \
+        show \
+          "dbus-broker" |
+        grep \
+          "LoadState=loaded" || \
+        true)"
+    if [[ "${_dbus_active}" != "" ]]; then
+      chroot_type="systemd-nspawn"
+    fi
+  fi
+  if [[ "${chroot_type}" == "" ]]; then
+    chroot_type="${_chroot_type}"
+  fi
+}
+
+_sound_enable_auto_detect() {
+  local \
+    _sound_enable
+  _sound_enable="n"
+  if [[ "${chroot_type}" == "systemd-nspawn" ]]; then
+    _sound_enable="y"
+  fi
+  if [[ "${sound_enable}" == "" ]]; then
+    sound_enable="${_sound_enable}"
+  fi
+}
+
+_video_enable_auto_detect() {
+  local \
+    _video_enable
+  _video_enable="n"
+  if [[ "${chroot_type}" == "systemd-nspawn" ]]; then
+    _video_enable="y"
+  fi
+  if [[ "${video_enable}" == "" ]]; then
+    video_enable="${_video_enable}"
+  fi
+}
+
+_set_overrides() {
+  if [[ "${quiet}" == "" ]]; then
+    quiet="n"
+  fi
+  if [[ "${raid_enable}" == "" ]]; then
+    raid_enable="y"
+  fi
+  _chroot_type_auto_detect
+  _sound_enable_auto_detect
+  _video_enable_auto_detect
+  if [[ "${virt_enable}" == "" ]]; then
+    virt_enable="y"
+  fi
+}
+
+_usage() {
+  local \
+    _exit="${1}" \
+    _usage_text
+  IFS='' \
+    read \
+      -r \
+      -d '' \
+      _usage_text << \
+        ENDUSAGETEXT || true
+
+Opens an host environment.
+
+Usage:
+  ${app_name}
+    [options]
+    <host-directory>
+
+  options:
+     -t <chroot-type>       It can be 'systemd-nspawn' or 'arch-chroot'.
+                            Default: ${chroot_type}
+     -r <y/n>               If enabled it passes sound devices to
+                            the 'systemd-nspawn' container.
+                            Default: ${raid_enable}
+     -s <y/n>               If enabled it passes sound devices to
+                            the 'systemd-nspawn' container.
+                            Default: ${sound_enable}
+     -g <y/n>               If enabled it passes video devices to
+                            the 'systemd-nspawn'.
+                            Default: ${video_enable}
+     -k <y/n>               Enables virtualization support in
+                            the 'systemd-nspawn' container.
+                            Default: ${virt_enable}
+
+     -h                     This message.
+     -v                     Enable verbose output
+ENDUSAGETEXT
+  printf \
+    '%s\n' \
+    "${_usage_text}"
+  exit \
+    "${_exit}"
+}
+
+# Shows configuration options.
+_show_config() {
+  _msg_info "${app_name} configuration"
+  _msg_info "              Chroot type:   ${chroot_type}"
+  _msg_info "                     Raid:   ${raid_enable}"
+  _msg_info "                    Sound:   ${sound_enable}"
+  _msg_info "                    Video:   ${video_enable}"
+  _msg_info "           Virtualization:   ${virt_enable}"
+  _msg_info "                Host path:   ${chroot_path}"
+}
+
+getopts_opts="$(
+  printf \
+    "%s" \
+    "t:r:s:g:k:" \
+    "vh")"
+while \
+  getopts \
+    "${getopts_opts}" \
+    arg; do
+  case \
+    "${arg}" in
+    t)
+      chroot_type="${OPTARG}" ;;
+    r)
+      raid_enable="${OPTARG}" ;;
+    s)
+      sound_enable="${OPTARG}" ;;
+    g)
+      video_enable="${OPTARG}" ;;
+    k)
+      virt_enable="${OPTARG}" ;;
+    v)
+      quiet="n" ;;
+    h)
+      _set_overrides
+      _usage \
+        0 ;;
+    *)
+      if [[ " ${getopts_opts} " != *"${arg}"* ]]; then
+        _msg=(
+          "Invalid argument '${arg}'."
+        )
+        _msg_error \
+          "${_msg[*]}" \
+          0
+        _usage \
+          1
+      fi ;;
+  esac
+done
+shift $((
+  OPTIND - 1 ))
+if (( "${#}" < 1 )); then
+  chroot_path="${PWD}"
+else
+  chroot_path="${1}"
+fi
+app_opts=(
+  "${chroot_path}"
+  "${chroot_type}"
+  "${raid_enable}"
+  "${sound_enable}"
+  "${video_enable}"
+  "${virt_enable}"
+)
 
 _requirements
 _chroot_shell \
-  "${_chroot}" 
+  "${_chroot_path}" 
