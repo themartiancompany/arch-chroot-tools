@@ -93,33 +93,33 @@ _chroot_shell() {
     --quiet
     # --machine
     #  "newgulla"
-    --bind=/run/udev
+    --bind="/run/udev"
   )
   for _card in "${_cards[@]}"; do
     _systemd_nspawn_opts+=(
-      --bind=${_card}
+      --bind="${_card}"
       # "--property=DeviceAllow='"${_card} rw"'"
     )
   done
   _systemd_nspawn_opts+=(
-    --bind=/dev/dri/renderD128
+    --bind="/dev/dri/renderD128"
     # "--property=DeviceAllow='"/dev/dri/renderD128 rw"'"
     # --property=DeviceAllow=\"char-drm rw\"
-    --bind=/dev/dri
+    --bind="/dev/dri"
     # TTYS one wants to share
-    --bind=/dev/tty
-    --bind=/dev/tty0
-    --bind=/dev/tty1
-    --bind=/dev/tty2
-    --bind=/dev/tty3
-    --bind=/dev/shm
+    --bind="/dev/tty"
+    --bind="/dev/tty0"
+    --bind="/dev/tty1"
+    --bind="/dev/tty2"
+    --bind="/dev/tty3"
+    --bind="/dev/shm"
     # Raid devices
-    --bind=/dev/md
-    --bind=/dev/fuse
+    --bind="/dev/md"
+    --bind="/dev/fuse"
     # Sound card
-    --bind=/dev/snd
+    --bind="/dev/snd"
     # Virtualization
-    --bind=/dev/kvm
+    --bind="/dev/kvm"
     # --share-system
     -E
       "DISPLAY=:0"
@@ -129,7 +129,7 @@ _chroot_shell() {
     # --capability=CAP_SYS_ADMIN
     # --capability=CAP_SYS_TTY_CONFIG
     # --capability=CAP_3D_ACCESS
-    --capability=all
+    --capability="all"
   )
   for _display in "${_displays[@]}"; do
     _systemd_nspawn_opts+=(
@@ -137,21 +137,22 @@ _chroot_shell() {
     )
   done
   _systemd_nspawn_opts+=(
-    --hostname=${_hostname}
+    --hostname="${_hostname}"
   )
   for _input in "${_inputs[@]}"; do
     _systemd_nspawn_opts+=(
-      --bind=${_input}
+      --bind="${_input}"
       # "--property=DeviceAllow='"${_input} rwm"'"
     )
   done
   _systemd_nspawn_opts+=(
-    --bind=/dev/input
+    --bind="/dev/input"
     # --property=DeviceAllow=\"char-input rwm\"
-    --bind=/sys/class/input
-    --bind=/run/dbus
-    --uuid=${_machine_id}
-    -D "${_chroot}"
+    --bind="/sys/class/input"
+    --bind="/run/dbus"
+    --uuid="${_machine_id}"
+    -D
+      "${_chroot}"
   )
   _msg=(
     "Running systemd-nspawn with"
@@ -166,6 +167,7 @@ _chroot_shell() {
     "${_systemd_nspawn_opts[@]}" \
     --property=DeviceAllow='char-input rwm' \
     --property=DeviceAllow='char-drm rw'
+    --property=DeviceAllow='/dev/snd rwm'
 }
 
 _chroot="${1}"
