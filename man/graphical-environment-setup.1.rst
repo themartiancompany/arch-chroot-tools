@@ -36,14 +36,14 @@ Graphical environment setup for vanilla Archiso systems
 Synopsis
 ========
 
-graphical-environment-setup *[options]*
+graphical-environment-setup *[options]* *chroot-path*
 
 
 Description
 ===========
 
 Setups stuff for running a graphical environment
-in an vanilla Archiso environment
+in a classical chroot environment.
 
 
 Options
