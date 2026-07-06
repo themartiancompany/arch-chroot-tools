@@ -19,6 +19,58 @@
 #    You should have received a copy of the GNU Affero General Public License
 #    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+_requirements() {
+  local \
+    _awk \
+    _modprobe \
+    _zramctl \
+    _msg=()
+  _awk="$(
+    command \
+      -v \
+      "awk" || \
+    true)"
+  if [[ "${_awk}" == "" ]]; then
+    _msg=(
+      "Install 'gawk'."
+    )
+    echo \
+      "${_msg[*]}" \
+      1>&2
+    exit \
+      1
+  fi
+  _modprobe="$(
+    command \
+      -v \
+      "modprobe" || \
+    true)"
+  if [[ "${_modprobe}" == "" ]]; then
+    _msg=(
+      "Install 'kmod'."
+    )
+    echo \
+      "${_msg[*]}" \
+      1>&2
+    exit \
+      1
+  fi
+  _zramctl="$(
+    command \
+      -v \
+      "zramctl" || \
+    true)"
+  if [[ "${_modprobe}" == "" ]]; then
+    _msg=(
+      "Install 'util-linux'."
+    )
+    echo \
+      "${_msg[*]}" \
+      1>&2
+    exit \
+      1
+  fi
+}
 
 _check_fs_btrfs() {
   local \
